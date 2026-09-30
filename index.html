@@ -1,95 +1,649 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
   <title>BadvelNet Live</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
   <style>
-    html,body,#map { height:100%; margin:0; }
-    .pin-online  { background:#22c55e; }
-    .pin-offline { background:#ef4444; }
-    .leaflet-marker-icon { border-radius:50%; border:2px solid #fff; }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%; margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      overscroll-behavior: none;
+    }
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* Header */
+    header {
+      background: #111827; border-bottom: 1px solid #1f2937;
+      padding: 10px 14px; display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    header .stats { margin-left: auto; display: flex; gap: 12px; font-size: 12px; }
+    header .stat b { font-size: 14px; display: block; }
+    .online  { color: #22c55e; }
+    .offline { color: #ef4444; }
+    .warn    { color: #f59e0b; }
+
+    /* Tabs */
+    nav.tabs {
+      display: flex; background: #111827; border-bottom: 1px solid #1f2937;
+      flex-shrink: 0;
+    }
+    nav.tabs button {
+      flex: 1; background: none; border: none; color: #94a3b8;
+      padding: 12px 8px; font-size: 13px; font-weight: 500;
+      cursor: pointer; position: relative;
+    }
+    nav.tabs button.active {
+      color: #38bdf8; border-bottom: 2px solid #38bdf8;
+    }
+    nav.tabs button .badge {
+      position: absolute; top: 6px; right: 22%;
+      background: #ef4444; color: white; font-size: 10px;
+      border-radius: 10px; padding: 1px 6px; font-weight: 700;
+    }
+
+    /* Panels */
+    .panel { display: none; flex: 1; overflow: hidden; position: relative; }
+    .panel.active { display: flex; flex-direction: column; }
+    #map { flex: 1; width: 100%; }
+
+    /* Search + filter */
+    .toolbar {
+      display: flex; gap: 8px; padding: 8px 10px;
+      background: #111827; border-bottom: 1px solid #1f2937;
+      flex-shrink: 0; overflow-x: auto;
+    }
+    .toolbar input {
+      flex: 1; min-width: 140px; background: #1f2937; color: #e2e8f0;
+      border: 1px solid #334155; border-radius: 8px;
+      padding: 8px 10px; font-size: 13px; outline: none;
+    }
+    .chip {
+      background: #1f2937; color: #cbd5e1; border: 1px solid #334155;
+      border-radius: 999px; padding: 6px 12px; font-size: 12px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .chip.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: 600; }
+
+    /* List */
+    .list { overflow-y: auto; flex: 1; }
+    .item {
+      padding: 12px 14px; border-bottom: 1px solid #1f2937;
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+    }
+    .item:hover { background: #1e293b; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot.online { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    .dot.offline { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
+    .item .info { flex: 1; min-width: 0; }
+    .item .name { font-weight: 600; font-size: 14px; }
+    .item .meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .item .uptime { font-size: 12px; font-weight: 600; }
+
+    /* Detail slide-over */
+    #detail {
+      position: absolute; inset: 0;
+      background: #0f172a; z-index: 1000;
+      transform: translateX(100%); transition: transform .25s ease;
+      display: flex; flex-direction: column;
+    }
+    #detail.open { transform: translateX(0); }
+    #detail .head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; border-bottom: 1px solid #1f2937;
+      background: #111827;
+    }
+    #detail .head button {
+      background: none; border: none; color: #38bdf8; font-size: 22px;
+      cursor: pointer; padding: 0 6px;
+    }
+    #detail .head h2 { font-size: 16px; margin: 0; flex: 1; }
+    #detail .body { overflow-y: auto; padding: 14px; flex: 1; }
+    #detail .kpi {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      margin-bottom: 14px;
+    }
+    #detail .kpi > div {
+      background: #1e293b; border-radius: 10px; padding: 10px;
+      text-align: center;
+    }
+    #detail .kpi b { display: block; font-size: 18px; margin-bottom: 2px; }
+    #detail .kpi span { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+    #detail .actions { display: flex; gap: 8px; margin-bottom: 14px; }
+    #detail .actions a, #detail .actions button {
+      flex: 1; text-align: center; padding: 10px;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      text-decoration: none; cursor: pointer; border: none;
+    }
+    #detail .actions a { background: #1e293b; color: #38bdf8; }
+    #detail .actions button { background: #38bdf8; color: #0f172a; }
+    #detail .timeline { margin-top: 8px; }
+    #detail .evt {
+      display: flex; gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid #1f2937; font-size: 13px;
+    }
+    #detail .evt .t { color: #94a3b8; font-size: 11px; min-width: 90px; }
+
+    /* Alerts */
+    .alert {
+      padding: 12px 14px; border-bottom: 1px solid #1f2937;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .alert .icon { font-size: 18px; flex-shrink: 0; }
+    .alert .msg { font-size: 13px; line-height: 1.4; }
+    .alert .time { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+
+    /* Banner */
+    #banner {
+      background: #7c2d12; color: #fed7aa; font-size: 12px;
+      padding: 6px 12px; text-align: center; display: none;
+    }
+    #banner.show { display: block; }
+
+    /* Floating refresh */
+    #refreshBtn {
+      position: absolute; bottom: 16px; right: 16px;
+      background: #38bdf8; color: #0f172a; border: none;
+      width: 48px; height: 48px; border-radius: 50%;
+      font-size: 20px; font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,.4); cursor: pointer;
+      z-index: 500;
+    }
+    #refreshBtn.spinning { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({
-    appId: "1ac38f19-3b6d-4e71-a7e4-9654b8c374ef",
-    notifyButton: { enable: true },
-    allowLocalhostAsSecureOrigin: true // for testing
-  });
-  await OneSignal.Slidedown.promptPush();   // ask user to subscribe
-});
-</script>
+<body>
+<div id="app">
 
-<script>
-OneSignalDeferred.push(async function(OneSignal) {
-  OneSignal.User.PushSubscription.addEventListener("change", async (event) => {
-    const id = event.current.id;
-    if (!id) return;
-    const email = prompt("Enter your email (for subscriber list):");
-    if (!email) return;
-    await fetch("YOUR_APPS_SCRIPT_WEBAPP_URL", {
-      method: "POST",
-      body: JSON.stringify({ action: "subscribe", email, playerId: id })
-    });
-  });
-});
-</script>
+  <header>
+    <h1>BadvelNet Live</h1>
+    <div class="stats">
+      <div class="stat online"><b id="statOnline">–</b>Online</div>
+      <div class="stat offline"><b id="statOffline">–</b>Offline</div>
+    </div>
+  </header>
 
-  
-  <body>
-<div id="map"></div>
+  <div id="banner">⚠️ Live data may be stale — check connection</div>
 
+  <nav class="tabs">
+    <button data-tab="map" class="active">🗺️ Map</button>
+    <button data-tab="list">📋 Hosts</button>
+    <button data-tab="alerts">🔔 Alerts<span class="badge" id="alertBadge" style="display:none">0</span></button>
+  </nav>
+
+  <!-- MAP -->
+  <div class="panel active" id="panel-map">
+    <div id="map"></div>
+    <button id="refreshBtn" title="Refresh">⟳</button>
+  </div>
+
+  <!-- LIST -->
+  <div class="panel" id="panel-list">
+    <div class="toolbar">
+      <input id="search" placeholder="Search host…" />
+    </div>
+    <div class="toolbar" id="filterChips">
+      <div class="chip active" data-filter="all">All</div>
+      <div class="chip" data-filter="Online">Online</div>
+      <div class="chip" data-filter="Offline">Offline</div>
+    </div>
+    <div class="list" id="hostList"></div>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="panel" id="panel-alerts">
+    <div class="list" id="alertList"></div>
+  </div>
+
+  <!-- DETAIL SLIDE-OVER -->
+  <div id="detail">
+    <div class="head">
+      <button id="closeDetail">←</button>
+      <h2 id="dName">Host</h2>
+    </div>
+    <div class="body" id="dBody"></div>
+  </div>
+
+</div>
+
+<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- OneSignal -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
 <script>
-// Your specific live Google Apps Script API URL
-const API = 'https://script.google.com/macros/s/AKfycby8m1WiQJ4OIz13vqExR23o9qbaILk5a2wocEMz8F-0os_28kLzcL2fXww1aVUSj-FpKw/exec';
-const map = L.map('map').setView([14.735, 79.060], 14); // Centered roughly on Badvel
+/*************************************************************
+ * CONFIG
+ *************************************************************/
+const API               = 'https://script.google.com/macros/s/AKfycby8m1WiQJ4OIz13vqExR23o9qbaILk5a2wocEMz8F-0os_28kLzcL2fXww1aVUSj-FpKw/exec';
+const ONESIGNAL_APP_ID  = '1ac38f19-3b6d-4e71-a7e4-9654b8c374ef';
+const REFRESH_MS        = 30000;   // 30s
+const MAX_ALERTS        = 100;     // shown in alerts tab
+const STALE_AFTER_MS    = 5 * 60 * 1000;
+
+/*************************************************************
+ * STATE
+ *************************************************************/
+const state = {
+  hosts: [],
+  alerts: [],
+  lastFetch: 0,
+  filter: 'all',
+  search: '',
+  markers: {},
+  seenAlerts: new Set()
+};
+
+/*************************************************************
+ * MAP
+ *************************************************************/
+const map = L.map('map', { zoomControl: true }).setView([14.735, 79.060], 14);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
+  attribution: '© OpenStreetMap', maxZoom: 19
 }).addTo(map);
 
-let markers = {};
+/*************************************************************
+ * API CALLS
+ *************************************************************/
+async function fetchHosts() {
+  try {
+    const res = await fetch(`${API}?action=hosts&_=${Date.now()}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    state.hosts = await res.json();
+    state.lastFetch = Date.now();
+    document.getElementById('banner').classList.remove('show');
+    renderAll();
+  } catch (e) {
+    console.error('fetchHosts failed:', e);
+    if (Date.now() - state.lastFetch > STALE_AFTER_MS) {
+      document.getElementById('banner').classList.add('show');
+    }
+  }
+}
 
-async function refresh() {
-  const res = await fetch(`${API}?action=hosts`);
-  const hosts = await res.json();
+async function fetchAlerts() {
+  try {
+    const res = await fetch(`${API}?action=alerts&limit=${MAX_ALERTS}&_=${Date.now()}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    state.alerts = data;
+    renderAlerts();
+  } catch (e) {
+    console.warn('fetchAlerts failed:', e);
+  }
+}
 
-  hosts.forEach(h => {
+/*************************************************************
+ * RENDER: MAP
+ *************************************************************/
+function renderMap() {
+  const visible = applyFilter(state.hosts);
+
+  // Remove markers no longer visible
+  Object.keys(state.markers).forEach(name => {
+    if (!visible.find(h => h.name === name)) {
+      map.removeLayer(state.markers[name]);
+      delete state.markers[name];
+    }
+  });
+
+  visible.forEach(h => {
     const color = h.status === 'Online' ? '#22c55e' : '#ef4444';
     const icon = L.divIcon({
-      className: 'leaflet-marker-icon',
-      html: `<div style="width:14px;height:14px;border-radius:50%;
+      className: '',
+      html: `<div style="width:16px;height:16px;border-radius:50%;
              background:${color};border:2px solid #fff;
-             box-shadow:0 0 6px rgba(0,0,0,.4)"></div>`,
-      iconSize: [18,18]
+             box-shadow:0 0 6px rgba(0,0,0,.5)"></div>`,
+      iconSize: [20, 20], iconAnchor: [10, 10]
     });
 
-    if (markers[h.name]) {
-      markers[h.name].setIcon(icon);
-      markers[h.name].setPopupContent(popup(h));
+    if (state.markers[h.name]) {
+      state.markers[h.name].setIcon(icon).setPopupContent(popup(h));
     } else {
-      markers[h.name] = L.marker([h.lat, h.lon], { icon })
+      state.markers[h.name] = L.marker([h.lat, h.lon], { icon })
         .addTo(map)
-        .bindPopup(popup(h));
+        .bindPopup(popup(h))
+        .on('click', () => openDetail(h.name));
     }
   });
 }
 
 function popup(h) {
-  return `<b>${h.name}</b><br>
-    Status: <b style="color:${h.status==='Online'?'green':'red'}">${h.status}</b><br>
-    Last seen: ${new Date(h.last_seen).toLocaleString()}<br>
-    <a href="https://www.google.com/maps?q=${h.lat},${h.lon}" target="_blank">Navigate</a>`;
+  const uptime = h.uptime_24h != null ? h.uptime_24h + '%' : '—';
+  return `<div style="min-width:180px">
+    <b>${h.name}</b><br>
+    <span style="color:${h.status==='Online'?'#16a34a':'#dc2626'};font-weight:700">
+      ● ${h.status}
+    </span><br>
+    <small>Uptime 24h: ${uptime}</small><br>
+    <small>Last seen: ${fmtTime(h.last_seen)}</small><br>
+    <a href="https://www.google.com/maps?q=${h.lat},${h.lon}" target="_blank">Navigate ↗</a>
+  </div>`;
 }
 
-refresh();
-setInterval(refresh, 30000);  // Auto-refreshes every 30 seconds
+/*************************************************************
+ * RENDER: LIST
+ *************************************************************/
+function renderList() {
+  const visible = applyFilter(state.hosts);
+  const el = document.getElementById('hostList');
+  if (!visible.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">No hosts match</div>';
+    return;
+  }
+  el.innerHTML = visible.map(h => `
+    <div class="item" onclick="openDetail('${escapeAttr(h.name)}')">
+      <div class="dot ${h.status === 'Online' ? 'online' : 'offline'}"></div>
+      <div class="info">
+        <div class="name">${escapeHtml(h.name)}</div>
+        <div class="meta">${fmtTime(h.last_seen)}</div>
+      </div>
+      <div class="uptime ${uptimeClass(h.uptime_24h)}">
+        ${h.uptime_24h != null ? h.uptime_24h + '%' : '—'}
+      </div>
+    </div>
+  `).join('');
+}
+
+/*************************************************************
+ * RENDER: ALERTS
+ *************************************************************/
+function renderAlerts() {
+  const el = document.getElementById('alertList');
+  if (!state.alerts.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">No alerts yet</div>';
+    document.getElementById('alertBadge').style.display = 'none';
+    return;
+  }
+
+  const unseen = state.alerts.filter(a => !state.seenAlerts.has(a.id)).length;
+  const badge = document.getElementById('alertBadge');
+  if (unseen > 0) {
+    badge.textContent = unseen; badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  el.innerHTML = state.alerts.map(a => {
+    const icon = a.event === 'OFFLINE' ? '🔴'
+               : a.event === 'ONLINE' ? '🟢'
+               : a.event === 'FLAPPING' ? '⚠️'
+               : a.event === 'AREA_OUTAGE' ? '🚨'
+               : 'ℹ️';
+    return `
+      <div class="alert" onclick="focusHost('${escapeAttr(a.host)}')">
+        <div class="icon">${icon}</div>
+        <div style="flex:1">
+          <div class="msg">${escapeHtml(a.message)}</div>
+          <div class="time">${fmtTime(a.ts)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/*************************************************************
+ * RENDER: HEADER STATS
+ *************************************************************/
+function renderStats() {
+  const online = state.hosts.filter(h => h.status === 'Online').length;
+  const offline = state.hosts.length - online;
+  document.getElementById('statOnline').textContent = online;
+  document.getElementById('statOffline').textContent = offline;
+}
+
+/*************************************************************
+ * DETAIL PANEL
+ *************************************************************/
+async function openDetail(name) {
+  const h = state.hosts.find(x => x.name === name);
+  if (!h) return;
+
+  document.getElementById('dName').textContent = h.name;
+
+  const uptime = h.uptime_24h != null ? h.uptime_24h + '%' : '—';
+  const uptime7 = h.uptime_7d != null ? h.uptime_7d + '%' : '—';
+  const uptime30 = h.uptime_30d != null ? h.uptime_30d + '%' : '—';
+
+  document.getElementById('dBody').innerHTML = `
+    <div class="kpi">
+      <div><b class="${h.status==='Online'?'online':'offline'}">
+        ${h.status === 'Online' ? '●' : '●'}
+      </b><span>${h.status}</span></div>
+      <div><b>${uptime}</b><span>Uptime 24h</span></div>
+      <div><b>${uptime7}</b><span>Uptime 7d</span></div>
+    </div>
+    <div class="actions">
+      <a href="https://www.google.com/maps?q=${h.lat},${h.lon}" target="_blank">🧭 Navigate</a>
+      <button onclick="focusHost('${escapeAttr(h.name)}')">📍 Show on map</button>
+    </div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:10px">
+      Last seen: ${fmtTime(h.last_seen)}<br>
+      Address: ${escapeHtml(h.address || '')}<br>
+      Coords: ${h.lat}, ${h.lon}<br>
+      Uptime 30d: ${uptime30}
+    </div>
+    <h3 style="font-size:13px;text-transform:uppercase;color:#94a3b8;margin:16px 0 8px">
+      Recent events
+    </h3>
+    <div class="timeline" id="dTimeline">Loading…</div>
+  `;
+
+  document.getElementById('detail').classList.add('open');
+
+  try {
+    const res = await fetch(`${API}?action=history&host=${encodeURIComponent(name)}&hours=72&_=${Date.now()}`);
+    const events = await res.json();
+    const tl = document.getElementById('dTimeline');
+    if (!events.length) {
+      tl.innerHTML = '<div style="color:#94a3b8;font-size:13px">No events in last 72h</div>';
+      return;
+    }
+    tl.innerHTML = events.reverse().map(e => `
+      <div class="evt">
+        <div class="t">${fmtTime(e.ts)}</div>
+        <div>
+          <span style="color:${e.status==='Online'?'#22c55e':'#ef4444'}">
+            ● ${escapeHtml(e.status)}
+          </span>
+          <span style="color:#94a3b8"> ← ${escapeHtml(e.prev || '—')}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('dTimeline').innerHTML =
+      '<div style="color:#ef4444;font-size:13px">Failed to load history</div>';
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detail').classList.remove('open');
+}
+
+function focusHost(name) {
+  const h = state.hosts.find(x => x.name === name);
+  if (!h) return;
+  switchTab('map');
+  map.setView([h.lat, h.lon], 17);
+  if (state.markers[name]) state.markers[name].openPopup();
+  closeDetail();
+}
+
+/*************************************************************
+ * FILTERS + SEARCH
+ *************************************************************/
+function applyFilter(hosts) {
+  let out = hosts;
+  if (state.filter !== 'all') {
+    out = out.filter(h => h.status === state.filter);
+  }
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    out = out.filter(h => h.name.toLowerCase().includes(q));
+  }
+  return out;
+}
+
+/*************************************************************
+ * TABS
+ *************************************************************/
+function switchTab(name) {
+  document.querySelectorAll('nav.tabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-' + name);
+  });
+  if (name === 'map') setTimeout(() => map.invalidateSize(), 50);
+  if (name === 'alerts') markAlertsSeen();
+}
+
+function markAlertsSeen() {
+  state.alerts.forEach(a => state.seenAlerts.add(a.id));
+  document.getElementById('alertBadge').style.display = 'none';
+}
+
+/*************************************************************
+ * ONE-SHOT RENDER
+ *************************************************************/
+function renderAll() {
+  renderStats();
+  renderMap();
+  renderList();
+}
+
+/*************************************************************
+ * UTILS
+ *************************************************************/
+function fmtTime(t) {
+  if (!t) return '—';
+  const d = new Date(t);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return Math.round(diff) + 's ago';
+  if (diff < 3600) return Math.round(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+function uptimeClass(u) {
+  if (u == null) return '';
+  if (u >= 99) return 'online';
+  if (u >= 95) return 'warn';
+  return 'offline';
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+
+/*************************************************************
+ * ONE-SIGNAL PUSH SETUP
+ *************************************************************/
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(async function(OneSignal) {
+  await OneSignal.init({
+    appId: ONESIGNAL_APP_ID,
+    notifyButton: { enable: true, position: 'bottom-left' },
+    allowLocalhostAsSecureOrigin: true
+  });
+
+  // Prompt on first load (skip if already subscribed)
+  try {
+    const opted = OneSignal.User.PushSubscription.optedIn;
+    if (!opted) await OneSignal.Slidedown.promptPush();
+  } catch (_) {}
+
+  // Capture new subscriptions
+  OneSignal.User.PushSubscription.addEventListener('change', async (event) => {
+    const id = event.current.id;
+    if (!id) return;
+    const email = prompt('Enter your email so we can link alerts to you:');
+    if (!email) return;
+    await postSubscription(email, id);
+  });
+
+  // Also capture existing subscription on load
+  const existingId = OneSignal.User.PushSubscription.id;
+  if (existingId) {
+    const saved = localStorage.getItem('subEmail');
+    if (!saved) {
+      const email = prompt('Enter your email so we can link alerts to you:');
+      if (email) {
+        localStorage.setItem('subEmail', email);
+        await postSubscription(email, existingId);
+      }
+    }
+  }
+});
+
+async function postSubscription(email, playerId) {
+  try {
+    await fetch(API, {
+      method: 'POST',
+      mode: 'no-cors',   // Apps Script requires this for simple POSTs
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'subscribe', email, playerId })
+    });
+    console.log('Subscription sent');
+  } catch (e) {
+    console.warn('Subscription post failed:', e);
+  }
+}
+
+/*************************************************************
+ * EVENT WIRING
+ *************************************************************/
+document.querySelectorAll('nav.tabs button').forEach(b => {
+  b.addEventListener('click', () => switchTab(b.dataset.tab));
+});
+
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    state.filter = c.dataset.filter;
+    renderMap(); renderList();
+  });
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  state.search = e.target.value.trim();
+  renderMap(); renderList();
+});
+
+document.getElementById('closeDetail').addEventListener('click', closeDetail);
+
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  await Promise.all([fetchHosts(), fetchAlerts()]);
+  setTimeout(() => btn.classList.remove('spinning'), 400);
+});
+
+/*************************************************************
+ * BOOT
+ *************************************************************/
+(async function boot() {
+  await fetchHosts();
+  await fetchAlerts();
+  setInterval(fetchHosts, REFRESH_MS);
+  setInterval(fetchAlerts, REFRESH_MS * 2);
+})();
 </script>
+
 </body>
 </html>
