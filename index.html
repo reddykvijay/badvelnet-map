@@ -6,171 +6,113 @@
   <meta name="theme-color" content="#0f172a" />
   <title>BadvelNet Live</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
   <style>
     * { box-sizing: border-box; }
-    html, body {
-      height: 100%; margin: 0; padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a; color: #e2e8f0;
-      overscroll-behavior: none;
-    }
-    #app { display: flex; flex-direction: column; height: 100vh; }
-
-    /* Header */
-    header {
-      background: #111827; border-bottom: 1px solid #1f2937;
-      padding: 10px 14px; display: flex; align-items: center; gap: 12px;
-      flex-shrink: 0;
-    }
-    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
-    header .stats { margin-left: auto; display: flex; gap: 12px; font-size: 12px; }
-    header .stat b { font-size: 14px; display: block; }
-    .online  { color: #22c55e; }
-    .offline { color: #ef4444; }
-    .warn    { color: #f59e0b; }
-
-    /* Tabs */
-    nav.tabs {
-      display: flex; background: #111827; border-bottom: 1px solid #1f2937;
-      flex-shrink: 0;
-    }
-    nav.tabs button {
-      flex: 1; background: none; border: none; color: #94a3b8;
-      padding: 12px 8px; font-size: 13px; font-weight: 500;
-      cursor: pointer; position: relative;
-    }
-    nav.tabs button.active {
-      color: #38bdf8; border-bottom: 2px solid #38bdf8;
-    }
-    nav.tabs button .badge {
-      position: absolute; top: 6px; right: 22%;
-      background: #ef4444; color: white; font-size: 10px;
-      border-radius: 10px; padding: 1px 6px; font-weight: 700;
-    }
-
-    /* Panels */
-    .panel { display: none; flex: 1; overflow: hidden; position: relative; }
-    .panel.active { display: flex; flex-direction: column; }
-    #map { flex: 1; width: 100%; }
-
-    /* Search + filter */
-    .toolbar {
-      display: flex; gap: 8px; padding: 8px 10px;
-      background: #111827; border-bottom: 1px solid #1f2937;
-      flex-shrink: 0; overflow-x: auto;
-    }
-    .toolbar input {
-      flex: 1; min-width: 140px; background: #1f2937; color: #e2e8f0;
-      border: 1px solid #334155; border-radius: 8px;
-      padding: 8px 10px; font-size: 13px; outline: none;
-    }
-    .chip {
-      background: #1f2937; color: #cbd5e1; border: 1px solid #334155;
-      border-radius: 999px; padding: 6px 12px; font-size: 12px;
-      cursor: pointer; white-space: nowrap;
-    }
-    .chip.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: 600; }
-
-    /* List */
-    .list { overflow-y: auto; flex: 1; }
-    .item {
-      padding: 12px 14px; border-bottom: 1px solid #1f2937;
-      display: flex; align-items: center; gap: 10px; cursor: pointer;
-    }
-    .item:hover { background: #1e293b; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .dot.online { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
-    .dot.offline { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
-    .item .info { flex: 1; min-width: 0; }
-    .item .name { font-weight: 600; font-size: 14px; }
-    .item .meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-    .item .uptime { font-size: 12px; font-weight: 600; }
-
-    /* Detail slide-over */
-    #detail {
-      position: absolute; inset: 0;
-      background: #0f172a; z-index: 1000;
-      transform: translateX(100%); transition: transform .25s ease;
-      display: flex; flex-direction: column;
-    }
-    #detail.open { transform: translateX(0); }
-    #detail .head {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 14px; border-bottom: 1px solid #1f2937;
-      background: #111827;
-    }
-    #detail .head button {
-      background: none; border: none; color: #38bdf8; font-size: 22px;
-      cursor: pointer; padding: 0 6px;
-    }
-    #detail .head h2 { font-size: 16px; margin: 0; flex: 1; }
-    #detail .body { overflow-y: auto; padding: 14px; flex: 1; }
-    #detail .kpi {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-      margin-bottom: 14px;
-    }
-    #detail .kpi > div {
-      background: #1e293b; border-radius: 10px; padding: 10px;
-      text-align: center;
-    }
-    #detail .kpi b { display: block; font-size: 18px; margin-bottom: 2px; }
-    #detail .kpi span { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
-    #detail .actions { display: flex; gap: 8px; margin-bottom: 14px; }
-    #detail .actions a, #detail .actions button {
-      flex: 1; text-align: center; padding: 10px;
-      border-radius: 8px; font-size: 13px; font-weight: 600;
-      text-decoration: none; cursor: pointer; border: none;
-    }
-    #detail .actions a { background: #1e293b; color: #38bdf8; }
-    #detail .actions button { background: #38bdf8; color: #0f172a; }
-    #detail .timeline { margin-top: 8px; }
-    #detail .evt {
-      display: flex; gap: 10px; padding: 8px 0;
-      border-bottom: 1px solid #1f2937; font-size: 13px;
-    }
-    #detail .evt .t { color: #94a3b8; font-size: 11px; min-width: 90px; }
-
-    /* Alerts */
-    .alert {
-      padding: 12px 14px; border-bottom: 1px solid #1f2937;
-      display: flex; gap: 10px; align-items: flex-start;
-    }
-    .alert .icon { font-size: 18px; flex-shrink: 0; }
-    .alert .msg { font-size: 13px; line-height: 1.4; }
-    .alert .time { font-size: 11px; color: #94a3b8; margin-top: 3px; }
-
-    /* Banner */
-    #banner {
-      background: #7c2d12; color: #fed7aa; font-size: 12px;
-      padding: 6px 12px; text-align: center; display: none;
-    }
-    #banner.show { display: block; }
-
-    /* Floating refresh */
-    #refreshBtn {
-      position: absolute; bottom: 16px; right: 16px;
-      background: #38bdf8; color: #0f172a; border: none;
-      width: 48px; height: 48px; border-radius: 50%;
-      font-size: 20px; font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,.4); cursor: pointer;
-      z-index: 500;
-    }
+    html, body { height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:#0f172a; color:#e2e8f0; overscroll-behavior:none; }
+    #app { display:flex; flex-direction:column; height:100vh; }
+    header { background:#111827; border-bottom:1px solid #1f2937; padding:10px 14px;
+      display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    header h1 { font-size:16px; margin:0; font-weight:600; }
+    header .stats { margin-left:auto; display:flex; gap:12px; font-size:12px; align-items:center; }
+    header .stat b { font-size:14px; display:block; }
+    .online { color:#22c55e; } .offline { color:#ef4444; } .warn { color:#f59e0b; }
+    nav.tabs { display:flex; background:#111827; border-bottom:1px solid #1f2937; flex-shrink:0; }
+    nav.tabs button { flex:1; background:none; border:none; color:#94a3b8; padding:12px 8px;
+      font-size:13px; font-weight:500; cursor:pointer; position:relative; }
+    nav.tabs button.active { color:#38bdf8; border-bottom:2px solid #38bdf8; }
+    nav.tabs button .badge { position:absolute; top:6px; right:22%; background:#ef4444; color:white;
+      font-size:10px; border-radius:10px; padding:1px 6px; font-weight:700; }
+    .panel { display:none; flex:1; overflow:hidden; position:relative; }
+    .panel.active { display:flex; flex-direction:column; }
+    #map { flex:1; width:100%; }
+    .toolbar { display:flex; gap:8px; padding:8px 10px; background:#111827;
+      border-bottom:1px solid #1f2937; flex-shrink:0; overflow-x:auto; }
+    .toolbar input { flex:1; min-width:140px; background:#1f2937; color:#e2e8f0;
+      border:1px solid #334155; border-radius:8px; padding:8px 10px; font-size:13px; outline:none; }
+    .chip { background:#1f2937; color:#cbd5e1; border:1px solid #334155; border-radius:999px;
+      padding:6px 12px; font-size:12px; cursor:pointer; white-space:nowrap; }
+    .chip.active { background:#38bdf8; color:#0f172a; border-color:#38bdf8; font-weight:600; }
+    .list { overflow-y:auto; flex:1; }
+    .item { padding:12px 14px; border-bottom:1px solid #1f2937; display:flex; align-items:center;
+      gap:10px; cursor:pointer; }
+    .item:hover { background:#1e293b; }
+    .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .dot.online { background:#22c55e; box-shadow:0 0 6px #22c55e88; }
+    .dot.offline { background:#ef4444; box-shadow:0 0 6px #ef444488; }
+    .item .info { flex:1; min-width:0; }
+    .item .name { font-weight:600; font-size:14px; }
+    .item .meta { font-size:11px; color:#94a3b8; margin-top:2px; }
+    .item .uptime { font-size:12px; font-weight:600; }
+    #detail { position:absolute; inset:0; background:#0f172a; z-index:1000;
+      transform:translateX(100%); transition:transform .25s ease; display:flex; flex-direction:column; }
+    #detail.open { transform:translateX(0); }
+    #detail .head { display:flex; align-items:center; gap:10px; padding:12px 14px;
+      border-bottom:1px solid #1f2937; background:#111827; }
+    #detail .head button { background:none; border:none; color:#38bdf8; font-size:22px;
+      cursor:pointer; padding:0 6px; }
+    #detail .head h2 { font-size:16px; margin:0; flex:1; }
+    #detail .body { overflow-y:auto; padding:14px; flex:1; }
+    #detail .kpi { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+    #detail .kpi > div { background:#1e293b; border-radius:10px; padding:10px; text-align:center; }
+    #detail .kpi b { display:block; font-size:18px; margin-bottom:2px; }
+    #detail .kpi span { font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
+    #detail .actions { display:flex; gap:8px; margin-bottom:14px; }
+    #detail .actions a, #detail .actions button { flex:1; text-align:center; padding:10px;
+      border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; cursor:pointer; border:none; }
+    #detail .actions a { background:#1e293b; color:#38bdf8; }
+    #detail .actions button { background:#38bdf8; color:#0f172a; }
+    #detail .evt { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #1f2937; font-size:13px; }
+    #detail .evt .t { color:#94a3b8; font-size:11px; min-width:90px; }
+    .alert { padding:12px 14px; border-bottom:1px solid #1f2937; display:flex; gap:10px; align-items:flex-start; }
+    .alert .icon { font-size:18px; flex-shrink:0; }
+    .alert .msg { font-size:13px; line-height:1.4; }
+    .alert .time { font-size:11px; color:#94a3b8; margin-top:3px; }
+    #banner { background:#7c2d12; color:#fed7aa; font-size:12px; padding:6px 12px;
+      text-align:center; display:none; }
+    #banner.show { display:block; }
+    #refreshBtn { position:absolute; bottom:16px; right:16px; background:#38bdf8; color:#0f172a;
+      border:none; width:48px; height:48px; border-radius:50%; font-size:20px; font-weight:bold;
+      box-shadow:0 4px 12px rgba(0,0,0,.4); cursor:pointer; z-index:500; }
     #refreshBtn.spinning { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    #userChip { display:flex; align-items:center; gap:6px; font-size:11px; cursor:pointer; }
+    #userChip .role { background:#38bdf8; color:#0f172a; padding:2px 6px; border-radius:4px;
+      font-weight:700; text-transform:uppercase; font-size:10px; }
+    #loginScreen { position:fixed; inset:0; background:#0f172a; color:#e2e8f0;
+      display:flex; align-items:center; justify-content:center; z-index:9999; }
+    #loginForm { background:#111827; padding:32px; border-radius:12px; width:320px;
+      display:flex; flex-direction:column; gap:14px; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+    #loginForm h1 { margin:0 0 8px; font-size:20px; text-align:center; }
+    #loginForm input { padding:12px; background:#1f2937; color:#e2e8f0;
+      border:1px solid #334155; border-radius:8px; font-size:14px; }
+    #loginForm button { padding:12px; background:#38bdf8; color:#0f172a; border:none;
+      border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
+    #loginError { color:#ef4444; font-size:12px; text-align:center; min-height:16px; }
   </style>
 </head>
-
 <body>
-<div id="app">
 
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <form id="loginForm">
+    <h1>BadvelNet Live</h1>
+    <input id="loginEmail" type="email" placeholder="Email" required autocomplete="username" />
+    <input id="loginPassword" type="password" placeholder="Password" required minlength="8" autocomplete="current-password" />
+    <button type="submit" id="loginBtn">Sign in</button>
+    <div id="loginError"></div>
+  </form>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none;">
   <header>
     <h1>BadvelNet Live</h1>
     <div class="stats">
       <div class="stat online"><b id="statOnline">–</b>Online</div>
       <div class="stat offline"><b id="statOffline">–</b>Offline</div>
+      <div id="userChip"></div>
     </div>
   </header>
 
@@ -182,17 +124,13 @@
     <button data-tab="alerts">🔔 Alerts<span class="badge" id="alertBadge" style="display:none">0</span></button>
   </nav>
 
-  <!-- MAP -->
   <div class="panel active" id="panel-map">
     <div id="map"></div>
     <button id="refreshBtn" title="Refresh">⟳</button>
   </div>
 
-  <!-- LIST -->
   <div class="panel" id="panel-list">
-    <div class="toolbar">
-      <input id="search" placeholder="Search host…" />
-    </div>
+    <div class="toolbar"><input id="search" placeholder="Search host…" /></div>
     <div class="toolbar" id="filterChips">
       <div class="chip active" data-filter="all">All</div>
       <div class="chip" data-filter="Online">Online</div>
@@ -201,12 +139,10 @@
     <div class="list" id="hostList"></div>
   </div>
 
-  <!-- ALERTS -->
   <div class="panel" id="panel-alerts">
     <div class="list" id="alertList"></div>
   </div>
 
-  <!-- DETAIL SLIDE-OVER -->
   <div id="detail">
     <div class="head">
       <button id="closeDetail">←</button>
@@ -214,29 +150,27 @@
     </div>
     <div class="body" id="dBody"></div>
   </div>
-
 </div>
 
-<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<!-- OneSignal -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
 <script>
 /*************************************************************
  * CONFIG
  *************************************************************/
-const API               = 'https://script.google.com/macros/s/AKfycby8m1WiQJ4OIz13vqExR23o9qbaILk5a2wocEMz8F-0os_28kLzcL2fXww1aVUSj-FpKw/exec';
-const ONESIGNAL_APP_ID  = '1ac38f19-3b6d-4e71-a7e4-9654b8c374ef';
-const REFRESH_MS        = 30000;   // 30s
-const MAX_ALERTS        = 100;     // shown in alerts tab
-const STALE_AFTER_MS    = 5 * 60 * 1000;
+const API              = 'PASTE_YOUR_APPS_SCRIPT_WEBAPP_URL_HERE';
+const ONESIGNAL_APP_ID = '1ac38f19-3b6d-4e71-a7e4-9654b8c374ef';
+const REFRESH_MS       = 30000;
+const MAX_ALERTS       = 100;
+const STALE_AFTER_MS   = 5 * 60 * 1000;
 
 /*************************************************************
  * STATE
  *************************************************************/
 const state = {
+  token: null,
+  session: null,
   hosts: [],
   alerts: [],
   lastFetch: 0,
@@ -246,22 +180,121 @@ const state = {
   seenAlerts: new Set()
 };
 
+let map = null;
+
+/*************************************************************
+ * SHA-256 (client-side password hashing)
+ *************************************************************/
+async function sha256Hex(str) {
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/*************************************************************
+ * LOGIN
+ *************************************************************/
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  err.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  try {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const password = document.getElementById('loginPassword').value;
+    if (password.length < 8) throw new Error('Password must be at least 8 characters');
+
+    const clientHash = await sha256Hex(password);
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'login', email, passwordHash: clientHash })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Login failed');
+
+    state.token = data.token;
+    state.session = data;
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('session', JSON.stringify(data));
+    showApp();
+  } catch (ex) {
+    err.textContent = ex.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+});
+
+async function logout() {
+  if (!confirm('Sign out?')) return;
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'logout', token: state.token })
+    });
+  } catch (_) {}
+  localStorage.clear();
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = '';
+  renderUserChip();
+  initMap();
+  boot();
+}
+
+function renderUserChip() {
+  const chip = document.getElementById('userChip');
+  if (!state.session) return;
+  chip.innerHTML = `
+    <span style="opacity:.7">${escapeHtml(state.session.email)}</span>
+    <span class="role">${escapeHtml(state.session.role)}</span>
+  `;
+  chip.onclick = logout;
+}
+
 /*************************************************************
  * MAP
  *************************************************************/
-const map = L.map('map', { zoomControl: true }).setView([14.735, 79.060], 14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap', maxZoom: 19
-}).addTo(map);
+function initMap() {
+  if (map) return;
+  map = L.map('map').setView([14.735, 79.060], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 19
+  }).addTo(map);
+}
 
 /*************************************************************
  * API CALLS
  *************************************************************/
+async function apiGet(action, params = {}) {
+  const qs = new URLSearchParams({
+    action,
+    token: state.token,
+    _: Date.now(),
+    ...params
+  });
+  const res = await fetch(`${API}?${qs}`);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (data.error === 'unauthorized') { logout(); throw new Error('Session expired'); }
+  return data;
+}
+
 async function fetchHosts() {
+  if (!state.token) return;
   try {
-    const res = await fetch(`${API}?action=hosts&_=${Date.now()}`);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    state.hosts = await res.json();
+    const data = await apiGet('hosts');
+    state.hosts = data;
     state.lastFetch = Date.now();
     document.getElementById('banner').classList.remove('show');
     renderAll();
@@ -274,11 +307,9 @@ async function fetchHosts() {
 }
 
 async function fetchAlerts() {
+  if (!state.token) return;
   try {
-    const res = await fetch(`${API}?action=alerts&limit=${MAX_ALERTS}&_=${Date.now()}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    state.alerts = data;
+    state.alerts = await apiGet('alerts', { limit: MAX_ALERTS });
     renderAlerts();
   } catch (e) {
     console.warn('fetchAlerts failed:', e);
@@ -286,12 +317,12 @@ async function fetchAlerts() {
 }
 
 /*************************************************************
- * RENDER: MAP
+ * RENDER — MAP
  *************************************************************/
 function renderMap() {
+  if (!map) return;
   const visible = applyFilter(state.hosts);
 
-  // Remove markers no longer visible
   Object.keys(state.markers).forEach(name => {
     if (!visible.find(h => h.name === name)) {
       map.removeLayer(state.markers[name]);
@@ -323,9 +354,9 @@ function renderMap() {
 function popup(h) {
   const uptime = h.uptime_24h != null ? h.uptime_24h + '%' : '—';
   return `<div style="min-width:180px">
-    <b>${h.name}</b><br>
+    <b>${escapeHtml(h.name)}</b><br>
     <span style="color:${h.status==='Online'?'#16a34a':'#dc2626'};font-weight:700">
-      ● ${h.status}
+      ● ${escapeHtml(h.status)}
     </span><br>
     <small>Uptime 24h: ${uptime}</small><br>
     <small>Last seen: ${fmtTime(h.last_seen)}</small><br>
@@ -334,7 +365,7 @@ function popup(h) {
 }
 
 /*************************************************************
- * RENDER: LIST
+ * RENDER — LIST
  *************************************************************/
 function renderList() {
   const visible = applyFilter(state.hosts);
@@ -358,7 +389,7 @@ function renderList() {
 }
 
 /*************************************************************
- * RENDER: ALERTS
+ * RENDER — ALERTS
  *************************************************************/
 function renderAlerts() {
   const el = document.getElementById('alertList');
@@ -380,7 +411,6 @@ function renderAlerts() {
     const icon = a.event === 'OFFLINE' ? '🔴'
                : a.event === 'ONLINE' ? '🟢'
                : a.event === 'FLAPPING' ? '⚠️'
-               : a.event === 'AREA_OUTAGE' ? '🚨'
                : 'ℹ️';
     return `
       <div class="alert" onclick="focusHost('${escapeAttr(a.host)}')">
@@ -394,7 +424,7 @@ function renderAlerts() {
 }
 
 /*************************************************************
- * RENDER: HEADER STATS
+ * RENDER — HEADER STATS
  *************************************************************/
 function renderStats() {
   const online = state.hosts.filter(h => h.status === 'Online').length;
@@ -404,7 +434,7 @@ function renderStats() {
 }
 
 /*************************************************************
- * DETAIL PANEL
+ * DETAIL
  *************************************************************/
 async function openDetail(name) {
   const h = state.hosts.find(x => x.name === name);
@@ -418,9 +448,7 @@ async function openDetail(name) {
 
   document.getElementById('dBody').innerHTML = `
     <div class="kpi">
-      <div><b class="${h.status==='Online'?'online':'offline'}">
-        ${h.status === 'Online' ? '●' : '●'}
-      </b><span>${h.status}</span></div>
+      <div><b class="${h.status==='Online'?'online':'offline'}">●</b><span>${escapeHtml(h.status)}</span></div>
       <div><b>${uptime}</b><span>Uptime 24h</span></div>
       <div><b>${uptime7}</b><span>Uptime 7d</span></div>
     </div>
@@ -430,7 +458,6 @@ async function openDetail(name) {
     </div>
     <div style="font-size:12px;color:#94a3b8;margin-bottom:10px">
       Last seen: ${fmtTime(h.last_seen)}<br>
-      Address: ${escapeHtml(h.address || '')}<br>
       Coords: ${h.lat}, ${h.lon}<br>
       Uptime 30d: ${uptime30}
     </div>
@@ -443,14 +470,13 @@ async function openDetail(name) {
   document.getElementById('detail').classList.add('open');
 
   try {
-    const res = await fetch(`${API}?action=history&host=${encodeURIComponent(name)}&hours=72&_=${Date.now()}`);
-    const events = await res.json();
+    const events = await apiGet('history', { host: name, hours: 72 });
     const tl = document.getElementById('dTimeline');
     if (!events.length) {
       tl.innerHTML = '<div style="color:#94a3b8;font-size:13px">No events in last 72h</div>';
       return;
     }
-    tl.innerHTML = events.reverse().map(e => `
+    tl.innerHTML = events.map(e => `
       <div class="evt">
         <div class="t">${fmtTime(e.ts)}</div>
         <div>
@@ -481,13 +507,11 @@ function focusHost(name) {
 }
 
 /*************************************************************
- * FILTERS + SEARCH
+ * FILTERS + TABS
  *************************************************************/
 function applyFilter(hosts) {
   let out = hosts;
-  if (state.filter !== 'all') {
-    out = out.filter(h => h.status === state.filter);
-  }
+  if (state.filter !== 'all') out = out.filter(h => h.status === state.filter);
   if (state.search) {
     const q = state.search.toLowerCase();
     out = out.filter(h => h.name.toLowerCase().includes(q));
@@ -495,9 +519,6 @@ function applyFilter(hosts) {
   return out;
 }
 
-/*************************************************************
- * TABS
- *************************************************************/
 function switchTab(name) {
   document.querySelectorAll('nav.tabs button').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === name);
@@ -505,7 +526,7 @@ function switchTab(name) {
   document.querySelectorAll('.panel').forEach(p => {
     p.classList.toggle('active', p.id === 'panel-' + name);
   });
-  if (name === 'map') setTimeout(() => map.invalidateSize(), 50);
+  if (name === 'map' && map) setTimeout(() => map.invalidateSize(), 50);
   if (name === 'alerts') markAlertsSeen();
 }
 
@@ -514,9 +535,6 @@ function markAlertsSeen() {
   document.getElementById('alertBadge').style.display = 'none';
 }
 
-/*************************************************************
- * ONE-SHOT RENDER
- *************************************************************/
 function renderAll() {
   renderStats();
   renderMap();
@@ -551,57 +569,41 @@ function escapeHtml(s) {
 function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 
 /*************************************************************
- * ONE-SIGNAL PUSH SETUP
+ * ONE-SIGNAL PUSH
  *************************************************************/
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({
-    appId: ONESIGNAL_APP_ID,
-    notifyButton: { enable: true, position: 'bottom-left' },
-    allowLocalhostAsSecureOrigin: true
-  });
-
-  // Prompt on first load (skip if already subscribed)
   try {
-    const opted = OneSignal.User.PushSubscription.optedIn;
-    if (!opted) await OneSignal.Slidedown.promptPush();
-  } catch (_) {}
+    await OneSignal.init({
+      appId: ONESIGNAL_APP_ID,
+      notifyButton: { enable: true, position: 'bottom-left' },
+      allowLocalhostAsSecureOrigin: true
+    });
 
-  // Capture new subscriptions
-  OneSignal.User.PushSubscription.addEventListener('change', async (event) => {
-    const id = event.current.id;
-    if (!id) return;
-    const email = prompt('Enter your email so we can link alerts to you:');
-    if (!email) return;
-    await postSubscription(email, id);
-  });
+    OneSignal.User.PushSubscription.addEventListener('change', async (event) => {
+      const id = event.current.id;
+      if (!id) return;
+      const email = state.session ? state.session.email : prompt('Your email:');
+      if (!email) return;
+      await postSubscription(email, id);
+    });
 
-  // Also capture existing subscription on load
-  const existingId = OneSignal.User.PushSubscription.id;
-  if (existingId) {
-    const saved = localStorage.getItem('subEmail');
-    if (!saved) {
-      const email = prompt('Enter your email so we can link alerts to you:');
-      if (email) {
-        localStorage.setItem('subEmail', email);
-        await postSubscription(email, existingId);
-      }
+    const existingId = OneSignal.User.PushSubscription.id;
+    if (existingId && state.session) {
+      await postSubscription(state.session.email, existingId);
     }
-  }
+  } catch (e) { console.warn('OneSignal init failed:', e); }
 });
 
 async function postSubscription(email, playerId) {
   try {
     await fetch(API, {
       method: 'POST',
-      mode: 'no-cors',   // Apps Script requires this for simple POSTs
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'subscribe', email, playerId })
     });
-    console.log('Subscription sent');
-  } catch (e) {
-    console.warn('Subscription post failed:', e);
-  }
+  } catch (e) { console.warn('Subscription post failed:', e); }
 }
 
 /*************************************************************
@@ -637,13 +639,35 @@ document.getElementById('refreshBtn').addEventListener('click', async () => {
 /*************************************************************
  * BOOT
  *************************************************************/
-(async function boot() {
-  await fetchHosts();
-  await fetchAlerts();
+function boot() {
+  fetchHosts();
+  fetchAlerts();
   setInterval(fetchHosts, REFRESH_MS);
   setInterval(fetchAlerts, REFRESH_MS * 2);
+}
+
+/*************************************************************
+ * SESSION RESTORE
+ *************************************************************/
+(async function restore() {
+  const token = localStorage.getItem('token');
+  const session = localStorage.getItem('session');
+  if (!token || !session) return;
+
+  try {
+    const res = await fetch(`${API}?action=me&token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (data.ok) {
+      state.token = token;
+      state.session = JSON.parse(session);
+      showApp();
+    } else {
+      localStorage.clear();
+    }
+  } catch (_) {
+    localStorage.clear();
+  }
 })();
 </script>
-
 </body>
 </html>
