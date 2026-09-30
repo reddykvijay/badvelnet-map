@@ -12,7 +12,37 @@
     .leaflet-marker-icon { border-radius:50%; border:2px solid #fff; }
   </style>
 </head>
-<body>
+
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(async function(OneSignal) {
+  await OneSignal.init({
+    appId: "1ac38f19-3b6d-4e71-a7e4-9654b8c374ef",
+    notifyButton: { enable: true },
+    allowLocalhostAsSecureOrigin: true // for testing
+  });
+  await OneSignal.Slidedown.promptPush();   // ask user to subscribe
+});
+</script>
+
+<script>
+OneSignalDeferred.push(async function(OneSignal) {
+  OneSignal.User.PushSubscription.addEventListener("change", async (event) => {
+    const id = event.current.id;
+    if (!id) return;
+    const email = prompt("Enter your email (for subscriber list):");
+    if (!email) return;
+    await fetch("YOUR_APPS_SCRIPT_WEBAPP_URL", {
+      method: "POST",
+      body: JSON.stringify({ action: "subscribe", email, playerId: id })
+    });
+  });
+});
+</script>
+
+  
+  <body>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
