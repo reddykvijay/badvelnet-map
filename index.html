@@ -10,23 +10,165 @@
   <style>
     * { box-sizing: border-box; }
     html, body { height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-      background:#0f172a; color:#e2e8f0; overscroll-behavior:none; }
+      background:#0f172a; color:#e2e8f0; overscroll-behavior:none; overflow:hidden; }
     #app { display:flex; flex-direction:column; height:100vh; }
+
+    /* HEADER */
     header { background:#111827; border-bottom:1px solid #1f2937; padding:10px 14px;
-      display:flex; align-items:center; gap:12px; flex-shrink:0; }
+      display:flex; align-items:center; gap:12px; flex-shrink:0; z-index:100; }
     header h1 { font-size:16px; margin:0; font-weight:600; }
     header .stats { margin-left:auto; display:flex; gap:12px; font-size:12px; align-items:center; }
     header .stat b { font-size:14px; display:block; }
-    .online { color:#22c55e; } .offline { color:#ef4444; } .warn { color:#f59e0b; }
-    nav.tabs { display:flex; background:#111827; border-bottom:1px solid #1f2937; flex-shrink:0; }
-    nav.tabs button { flex:1; background:none; border:none; color:#94a3b8; padding:12px 8px;
-      font-size:13px; font-weight:500; cursor:pointer; position:relative; }
+    .online  { color:#22c55e; }
+    .offline { color:#ef4444; }
+    #userChip { display:flex; align-items:center; gap:6px; font-size:11px; cursor:pointer; }
+    #userChip .role { background:#38bdf8; color:#0f172a; padding:2px 6px; border-radius:4px;
+      font-weight:700; text-transform:uppercase; font-size:10px; }
+
+    /* TABS */
+    nav.tabs { display:flex; background:#111827; border-bottom:1px solid #1f2937; flex-shrink:0; z-index:100; }
+    nav.tabs button { flex:1; background:none; border:none; color:#94a3b8; padding:10px 8px;
+      font-size:12px; font-weight:500; cursor:pointer; position:relative; }
     nav.tabs button.active { color:#38bdf8; border-bottom:2px solid #38bdf8; }
-    nav.tabs button .badge { position:absolute; top:6px; right:22%; background:#ef4444; color:white;
-      font-size:10px; border-radius:10px; padding:1px 6px; font-weight:700; }
-    .panel { display:none; flex:1; overflow:hidden; position:relative; }
-    .panel.active { display:flex; flex-direction:column; }
-    #map { flex:1; width:100%; }
+    nav.tabs button .badge { position:absolute; top:4px; right:22%; background:#ef4444; color:white;
+      font-size:9px; border-radius:10px; padding:1px 5px; font-weight:700; }
+
+    /* MAIN 3-PANEL GRID */
+    #mainGrid {
+      display:grid;
+      grid-template-columns: 220px 1fr 220px;
+      flex:1;
+      overflow:hidden;
+      position:relative;
+      height:100%;
+    }
+
+    /* CONTAINERS (left/right) */
+    .container {
+      background:#0b1220;
+      border-right:1px solid #1f2937;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      position:relative;
+      z-index:10;
+    }
+    .container.right { border-right:none; border-left:1px solid #1f2937; }
+    .container header {
+      padding:8px 12px;
+      background:#111827;
+      border-bottom:1px solid #1f2937;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      font-weight:700;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-shrink:0;
+    }
+    .container .count {
+      background:#1f2937;
+      padding:2px 8px;
+      border-radius:10px;
+      font-size:10px;
+      letter-spacing:0;
+    }
+    .container.online header  { color:#22c55e; }
+    .container.offline header { color:#ef4444; }
+    .container .body {
+      flex:1;
+      overflow-y:auto;
+      padding:8px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    /* PILLS */
+    .pill {
+      background:#1e293b;
+      border:1px solid #334155;
+      border-radius:8px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:500;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      transition: background .2s, border-color .2s, transform .15s;
+      position:relative;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      will-change: transform;
+    }
+    .pill:hover { background:#334155; border-color:#475569; }
+    .pill .dot {
+      width:6px; height:6px; border-radius:50%;
+      background:#22c55e; flex-shrink:0;
+    }
+    .pill.offline-pill .dot { background:#ef4444; }
+    .pill .label {
+      overflow:hidden;
+      text-overflow:ellipsis;
+      flex:1;
+    }
+    .pill.flip-pending { opacity:0.3; }
+
+    /* MAP WRAPPER */
+    #mapWrap {
+      position:relative;
+      overflow:hidden;
+    }
+    #map { position:absolute; inset:0; }
+
+    /* MOVING PILL — animated overlay */
+    .moving-pill {
+      position:fixed;
+      background:#1e293b;
+      border:1px solid #38bdf8;
+      border-radius:8px;
+      padding:7px 10px;
+      font-size:12px;
+      font-weight:600;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      pointer-events:none;
+      z-index:9000;
+      box-shadow: 0 8px 24px rgba(56,189,248,.5);
+      will-change: transform, left, top;
+    }
+    .moving-pill.falling {
+      transition: top .6s cubic-bezier(.34,.1,.68,.99),
+                  left .6s cubic-bezier(.34,.1,.68,.99),
+                  transform .3s ease;
+    }
+    .moving-pill .dot { width:6px; height:6px; border-radius:50%; }
+
+    /* PIN PULSE */
+    @keyframes pinPulse {
+      0%   { box-shadow:0 0 0 0 rgba(56,189,248,.9); }
+      70%  { box-shadow:0 0 0 20px rgba(56,189,248,0); }
+      100% { box-shadow:0 0 0 0 rgba(56,189,248,0); }
+    }
+    .pin-pulse {
+      animation: pinPulse 1s ease-out 2;
+    }
+
+    /* PIN COLOR TRANSITION */
+    .pin-dot {
+      width:16px; height:16px; border-radius:50%;
+      border:2px solid #fff;
+      box-shadow: 0 0 6px rgba(0,0,0,.5);
+      transition: background-color .8s ease;
+    }
+
+    /* PANELS */
+    .panel { display:none; flex:1; overflow:hidden; flex-direction:column; }
+    .panel.active { display:flex; }
     .toolbar { display:flex; gap:8px; padding:8px 10px; background:#111827;
       border-bottom:1px solid #1f2937; flex-shrink:0; overflow-x:auto; }
     .toolbar input { flex:1; min-width:140px; background:#1f2937; color:#e2e8f0;
@@ -38,14 +180,28 @@
     .item { padding:12px 14px; border-bottom:1px solid #1f2937; display:flex; align-items:center;
       gap:10px; cursor:pointer; }
     .item:hover { background:#1e293b; }
-    .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-    .dot.online { background:#22c55e; box-shadow:0 0 6px #22c55e88; }
-    .dot.offline { background:#ef4444; box-shadow:0 0 6px #ef444488; }
+    .item .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .item .dot.online { background:#22c55e; }
+    .item .dot.offline { background:#ef4444; }
     .item .info { flex:1; min-width:0; }
     .item .name { font-weight:600; font-size:14px; }
     .item .meta { font-size:11px; color:#94a3b8; margin-top:2px; }
     .item .uptime { font-size:12px; font-weight:600; }
-    #detail { position:absolute; inset:0; background:#0f172a; z-index:1000;
+    .alert { padding:12px 14px; border-bottom:1px solid #1f2937; display:flex; gap:10px; align-items:flex-start; }
+    .alert .icon { font-size:18px; flex-shrink:0; }
+    .alert .msg { font-size:13px; line-height:1.4; }
+    .alert .time { font-size:11px; color:#94a3b8; margin-top:3px; }
+    #banner { background:#7c2d12; color:#fed7aa; font-size:12px; padding:6px 12px;
+      text-align:center; display:none; }
+    #banner.show { display:block; }
+    #refreshBtn { position:absolute; bottom:16px; right:16px; background:#38bdf8; color:#0f172a;
+      border:none; width:44px; height:44px; border-radius:50%; font-size:18px; font-weight:bold;
+      box-shadow:0 4px 12px rgba(0,0,0,.4); cursor:pointer; z-index:800; }
+    #refreshBtn.spinning { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Detail slide-over */
+    #detail { position:fixed; inset:0; background:#0f172a; z-index:9000;
       transform:translateX(100%); transition:transform .25s ease; display:flex; flex-direction:column; }
     #detail.open { transform:translateX(0); }
     #detail .head { display:flex; align-items:center; gap:10px; padding:12px 14px;
@@ -57,7 +213,7 @@
     #detail .kpi { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
     #detail .kpi > div { background:#1e293b; border-radius:10px; padding:10px; text-align:center; }
     #detail .kpi b { display:block; font-size:18px; margin-bottom:2px; }
-    #detail .kpi span { font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
+    #detail .kpi span { font-size:10px; color:#94a3b8; text-transform:uppercase; }
     #detail .actions { display:flex; gap:8px; margin-bottom:14px; }
     #detail .actions a, #detail .actions button { flex:1; text-align:center; padding:10px;
       border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; cursor:pointer; border:none; }
@@ -65,21 +221,8 @@
     #detail .actions button { background:#38bdf8; color:#0f172a; }
     #detail .evt { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #1f2937; font-size:13px; }
     #detail .evt .t { color:#94a3b8; font-size:11px; min-width:90px; }
-    .alert { padding:12px 14px; border-bottom:1px solid #1f2937; display:flex; gap:10px; align-items:flex-start; }
-    .alert .icon { font-size:18px; flex-shrink:0; }
-    .alert .msg { font-size:13px; line-height:1.4; }
-    .alert .time { font-size:11px; color:#94a3b8; margin-top:3px; }
-    #banner { background:#7c2d12; color:#fed7aa; font-size:12px; padding:6px 12px;
-      text-align:center; display:none; }
-    #banner.show { display:block; }
-    #refreshBtn { position:absolute; bottom:16px; right:16px; background:#38bdf8; color:#0f172a;
-      border:none; width:48px; height:48px; border-radius:50%; font-size:20px; font-weight:bold;
-      box-shadow:0 4px 12px rgba(0,0,0,.4); cursor:pointer; z-index:500; }
-    #refreshBtn.spinning { animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #userChip { display:flex; align-items:center; gap:6px; font-size:11px; cursor:pointer; }
-    #userChip .role { background:#38bdf8; color:#0f172a; padding:2px 6px; border-radius:4px;
-      font-weight:700; text-transform:uppercase; font-size:10px; }
+
+    /* LOGIN */
     #loginScreen { position:fixed; inset:0; background:#0f172a; color:#e2e8f0;
       display:flex; align-items:center; justify-content:center; z-index:9999; }
     #loginForm { background:#111827; padding:32px; border-radius:12px; width:320px;
@@ -90,11 +233,19 @@
     #loginForm button { padding:12px; background:#38bdf8; color:#0f172a; border:none;
       border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
     #loginError { color:#ef4444; font-size:12px; text-align:center; min-height:16px; }
+
+    /* Mobile — collapse containers to bottom strip */
+    @media (max-width: 700px) {
+      #mainGrid { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .container { display:none; }
+      .container.mobile-strip { display:flex; height:110px; border:none; border-top:1px solid #1f2937; }
+      .container.mobile-strip .body { flex-direction:row; overflow-x:auto; overflow-y:hidden; }
+      .container.mobile-strip .pill { flex-shrink:0; }
+    }
   </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
 <div id="loginScreen">
   <form id="loginForm">
     <h1>BadvelNet Live</h1>
@@ -105,7 +256,6 @@
   </form>
 </div>
 
-<!-- MAIN APP -->
 <div id="app" style="display:none;">
   <header>
     <h1>BadvelNet Live</h1>
@@ -116,17 +266,31 @@
     </div>
   </header>
 
-  <div id="banner">⚠️ Live data may be stale — check connection</div>
+  <div id="banner">⚠️ Live data may be stale</div>
 
   <nav class="tabs">
-    <button data-tab="map" class="active">🗺️ Map</button>
-    <button data-tab="list">📋 Hosts</button>
+    <button data-tab="live" class="active">⚡ Live</button>
+    <button data-tab="list">📋 All Hosts</button>
     <button data-tab="alerts">🔔 Alerts<span class="badge" id="alertBadge" style="display:none">0</span></button>
   </nav>
 
-  <div class="panel active" id="panel-map">
-    <div id="map"></div>
-    <button id="refreshBtn" title="Refresh">⟳</button>
+  <div class="panel active" id="panel-live">
+    <div id="mainGrid">
+      <div class="container online" id="container-online">
+        <header>🟢 Online <span class="count" id="countOnline">0</span></header>
+        <div class="body" id="onlineList"></div>
+      </div>
+
+      <div id="mapWrap">
+        <div id="map"></div>
+        <button id="refreshBtn" title="Refresh">⟳</button>
+      </div>
+
+      <div class="container offline right" id="container-offline">
+        <header>🔴 Offline <span class="count" id="countOffline">0</span></header>
+        <div class="body" id="offlineList"></div>
+      </div>
+    </div>
   </div>
 
   <div class="panel" id="panel-list">
@@ -142,14 +306,14 @@
   <div class="panel" id="panel-alerts">
     <div class="list" id="alertList"></div>
   </div>
+</div>
 
-  <div id="detail">
-    <div class="head">
-      <button id="closeDetail">←</button>
-      <h2 id="dName">Host</h2>
-    </div>
-    <div class="body" id="dBody"></div>
+<div id="detail">
+  <div class="head">
+    <button id="closeDetail">←</button>
+    <h2 id="dName">Host</h2>
   </div>
+  <div class="body" id="dBody"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -159,11 +323,12 @@
 /*************************************************************
  * CONFIG
  *************************************************************/
-const API              = 'https://script.google.com/macros/s/AKfycby8m1WiQJ4OIz13vqExR23o9qbaILk5a2wocEMz8F-0os_28kLzcL2fXww1aVUSj-FpKw/exec';
+const API              = 'PASTE_YOUR_APPS_SCRIPT_WEBAPP_URL_HERE';
 const ONESIGNAL_APP_ID = '1ac38f19-3b6d-4e71-a7e4-9654b8c374ef';
 const REFRESH_MS       = 30000;
 const MAX_ALERTS       = 100;
 const STALE_AFTER_MS   = 5 * 60 * 1000;
+const FLY_DURATION_MS  = 700;
 
 /*************************************************************
  * STATE
@@ -172,25 +337,71 @@ const state = {
   token: null,
   session: null,
   hosts: [],
+  prevHosts: {},     // name -> status (from last render)
   alerts: [],
   lastFetch: 0,
   filter: 'all',
   search: '',
   markers: {},
-  seenAlerts: new Set()
+  seenAlerts: new Set(),
+  soundEnabled: true
 };
 
 let map = null;
 
 /*************************************************************
- * SHA-256 (client-side password hashing)
+ * SOUND EFFECTS — generated with Web Audio API (no files needed)
+ *************************************************************/
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (_) { audioCtx = null; }
+  }
+  return audioCtx;
+}
+
+function playOnlineSound() {
+  if (!state.soundEnabled) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  // Two rising notes — "success chime"
+  playTone(ctx, 660, 0,    0.12, 'sine');
+  playTone(ctx, 990, 0.12, 0.20, 'sine');
+}
+
+function playOfflineSound() {
+  if (!state.soundEnabled) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  // Two falling notes — "warning thud"
+  playTone(ctx, 400, 0,    0.15, 'triangle');
+  playTone(ctx, 220, 0.15, 0.30, 'triangle');
+}
+
+function playTone(ctx, freq, delay, duration, type) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  const t = ctx.currentTime + delay;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.15, t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  osc.start(t);
+  osc.stop(t + duration + 0.05);
+}
+
+/*************************************************************
+ * SHA-256
  *************************************************************/
 async function sha256Hex(str) {
   const buf = new TextEncoder().encode(str);
   const hash = await crypto.subtle.digest('SHA-256', buf);
   return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+    .map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /*************************************************************
@@ -203,12 +414,10 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   err.textContent = '';
   btn.disabled = true;
   btn.textContent = 'Signing in…';
-
   try {
     const email = document.getElementById('loginEmail').value.trim().toLowerCase();
     const password = document.getElementById('loginPassword').value;
     if (password.length < 8) throw new Error('Password must be at least 8 characters');
-
     const clientHash = await sha256Hex(password);
     const res = await fetch(API, {
       method: 'POST',
@@ -217,7 +426,6 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Login failed');
-
     state.token = data.token;
     state.session = data;
     localStorage.setItem('token', data.token);
@@ -258,8 +466,17 @@ function renderUserChip() {
   chip.innerHTML = `
     <span style="opacity:.7">${escapeHtml(state.session.email)}</span>
     <span class="role">${escapeHtml(state.session.role)}</span>
+    <span title="Toggle sound" id="soundToggle" style="cursor:pointer">${state.soundEnabled?'🔔':'🔕'}</span>
   `;
-  chip.onclick = logout;
+  chip.onclick = (e) => {
+    if (e.target.id === 'soundToggle') {
+      state.soundEnabled = !state.soundEnabled;
+      e.target.textContent = state.soundEnabled ? '🔔' : '🔕';
+      if (state.soundEnabled) playOnlineSound();
+      return;
+    }
+    logout();
+  };
 }
 
 /*************************************************************
@@ -267,22 +484,18 @@ function renderUserChip() {
  *************************************************************/
 function initMap() {
   if (map) return;
-  map = L.map('map').setView([14.735, 79.060], 14);
+  map = L.map('map', { zoomControl: true }).setView([14.735, 79.060], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap', maxZoom: 19
   }).addTo(map);
+  setTimeout(() => map.invalidateSize(), 100);
 }
 
 /*************************************************************
- * API CALLS
+ * API
  *************************************************************/
 async function apiGet(action, params = {}) {
-  const qs = new URLSearchParams({
-    action,
-    token: state.token,
-    _: Date.now(),
-    ...params
-  });
+  const qs = new URLSearchParams({ action, token: state.token, _: Date.now(), ...params });
   const res = await fetch(`${API}?${qs}`);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
@@ -294,10 +507,14 @@ async function fetchHosts() {
   if (!state.token) return;
   try {
     const data = await apiGet('hosts');
+    const changes = detectChanges(data);
     state.hosts = data;
     state.lastFetch = Date.now();
     document.getElementById('banner').classList.remove('show');
     renderAll();
+
+    // Animate each change AFTER render so pill is in DOM
+    changes.forEach((c, idx) => setTimeout(() => animateFlip(c), idx * 400));
   } catch (e) {
     console.error('fetchHosts failed:', e);
     if (Date.now() - state.lastFetch > STALE_AFTER_MS) {
@@ -311,9 +528,22 @@ async function fetchAlerts() {
   try {
     state.alerts = await apiGet('alerts', { limit: MAX_ALERTS });
     renderAlerts();
-  } catch (e) {
-    console.warn('fetchAlerts failed:', e);
-  }
+  } catch (e) { console.warn('fetchAlerts failed:', e); }
+}
+
+/*************************************************************
+ * DETECT CHANGES
+ *************************************************************/
+function detectChanges(newHosts) {
+  const changes = [];
+  newHosts.forEach(h => {
+    const prev = state.prevHosts[h.name];
+    if (prev && prev !== h.status) {
+      changes.push({ name: h.name, from: prev, to: h.status, lat: h.lat, lon: h.lon });
+    }
+  });
+  newHosts.forEach(h => state.prevHosts[h.name] = h.status);
+  return changes;
 }
 
 /*************************************************************
@@ -321,22 +551,12 @@ async function fetchAlerts() {
  *************************************************************/
 function renderMap() {
   if (!map) return;
-  const visible = applyFilter(state.hosts);
-
-  Object.keys(state.markers).forEach(name => {
-    if (!visible.find(h => h.name === name)) {
-      map.removeLayer(state.markers[name]);
-      delete state.markers[name];
-    }
-  });
-
-  visible.forEach(h => {
+  state.hosts.forEach(h => {
     const color = h.status === 'Online' ? '#22c55e' : '#ef4444';
     const icon = L.divIcon({
       className: '',
-      html: `<div style="width:16px;height:16px;border-radius:50%;
-             background:${color};border:2px solid #fff;
-             box-shadow:0 0 6px rgba(0,0,0,.5)"></div>`,
+      html: `<div class="pin-dot" id="pin-${cssId(h.name)}"
+             style="background:${color}"></div>`,
       iconSize: [20, 20], iconAnchor: [10, 10]
     });
 
@@ -365,7 +585,145 @@ function popup(h) {
 }
 
 /*************************************************************
- * RENDER — LIST
+ * RENDER — CONTAINERS (left/right)
+ *************************************************************/
+function renderContainers() {
+  const online = state.hosts.filter(h => h.status === 'Online');
+  const offline = state.hosts.filter(h => h.status === 'Offline');
+
+  document.getElementById('countOnline').textContent = online.length;
+  document.getElementById('countOffline').textContent = offline.length;
+
+  renderContainerList('onlineList', online, 'online');
+  renderContainerList('offlineList', offline, 'offline');
+}
+
+function renderContainerList(elemId, hosts, kind) {
+  const el = document.getElementById(elemId);
+  el.innerHTML = hosts.map(h => `
+    <div class="pill ${kind === 'offline' ? 'offline-pill' : ''}"
+         data-host="${escapeAttr(h.name)}"
+         onclick="focusHost('${escapeAttr(h.name)}')">
+      <span class="dot"></span>
+      <span class="label">${escapeHtml(h.name)}</span>
+    </div>
+  `).join('');
+}
+
+/*************************************************************
+ * ANIMATE FLIP — the main event
+ *************************************************************/
+async function animateFlip(change) {
+  const { name, from, to, lat, lon } = change;
+
+  // 1. Find source pill in DOM
+  const srcContainer = from === 'Online' ? 'onlineList' : 'offlineList';
+  const srcPill = document.querySelector(`#${srcContainer} .pill[data-host="${cssEscape(name)}"]`);
+  if (!srcPill) { fallbackFlash(name, to); return; }
+
+  const srcRect = srcPill.getBoundingClientRect();
+
+  // 2. Compute target container position
+  const dstContainer = to === 'Online' ? 'onlineList' : 'offlineList';
+  const dstBody = document.getElementById(dstContainer);
+  const dstContainerEl = dstBody.closest('.container');
+  const dstRect = dstContainerEl.getBoundingClientRect();
+
+  // 3. Hide source pill
+  srcPill.classList.add('flip-pending');
+
+  // 4. Create floating "moving pill" clone
+  const flying = document.createElement('div');
+  flying.className = 'moving-pill falling';
+  flying.innerHTML = `<span class="dot" style="background:${to==='Online'?'#22c55e':'#ef4444'}"></span>
+                      <span>${escapeHtml(name)}</span>`;
+  flying.style.left = srcRect.left + 'px';
+  flying.style.top = srcRect.top + 'px';
+  flying.style.width = srcRect.width + 'px';
+  document.body.appendChild(flying);
+
+  // 5. Play sound
+  if (to === 'Online') playOnlineSound(); else playOfflineSound();
+
+  // 6. Move pin pulse — pulse the map pin and flip color
+  pulsePin(name, to);
+
+  // 7. Compute path via map pin (screen coords)
+  const pinScreen = latLonToScreen(lat, lon);
+  const finalLeft = dstRect.left + 12;
+  const finalTop = dstRect.top + 40 + (Math.random() * 40);  // some vertical variation
+
+  // ---- Phase A: fly to pin (300ms)
+  requestAnimationFrame(() => {
+    flying.style.transition = 'left .35s ease-out, top .35s ease-out, transform .35s ease-out';
+    flying.style.left = (pinScreen.x - srcRect.width/2) + 'px';
+    flying.style.top = (pinScreen.y - 10) + 'px';
+    flying.style.transform = 'scale(1.15)';
+  });
+
+  // ---- Phase B: after reaching pin, arc down to target container
+  await wait(380);
+
+  // Pin pulse (bigger) at arrival
+  pulsePin(name, to, true);
+
+  // Bounce/drop into container
+  requestAnimationFrame(() => {
+    flying.style.transition = 'left .5s cubic-bezier(.34,.1,.68,.99), top .6s cubic-bezier(.55,0,.7,1.2), transform .4s ease';
+    flying.style.left = finalLeft + 'px';
+    flying.style.top  = finalTop + 'px';
+    flying.style.transform = 'scale(0.9)';
+  });
+
+  await wait(700);
+
+  // 8. Fade out the flying pill and un-hide the destination
+  flying.style.transition = 'opacity .2s ease';
+  flying.style.opacity = '0';
+  await wait(200);
+  flying.remove();
+
+  // 9. Re-render containers (already reflects new state)
+  renderContainers();
+}
+
+function fallbackFlash(name, to) {
+  // If we can't find the pill (first load), just flash the pin
+  pulsePin(name, to, true);
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/*************************************************************
+ * PIN VISUAL — pulse + color change
+ *************************************************************/
+function pulsePin(name, newStatus, big = false) {
+  const pinEl = document.getElementById('pin-' + cssId(name));
+  if (!pinEl) return;
+  pinEl.style.transition = 'background-color .8s ease';
+  pinEl.style.background = newStatus === 'Online' ? '#22c55e' : '#ef4444';
+  pinEl.classList.remove('pin-pulse');
+  void pinEl.offsetWidth; // reflow to restart animation
+  pinEl.classList.add('pin-pulse');
+  if (big) {
+    // second pulse for emphasis
+    setTimeout(() => {
+      pinEl.classList.remove('pin-pulse');
+      void pinEl.offsetWidth;
+      pinEl.classList.add('pin-pulse');
+    }, 400);
+  }
+}
+
+function latLonToScreen(lat, lon) {
+  if (!map) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  const pt = map.latLngToContainerPoint([lat, lon]);
+  const rect = map.getContainer().getBoundingClientRect();
+  return { x: pt.x + rect.left, y: pt.y + rect.top };
+}
+
+/*************************************************************
+ * RENDER — LIST (existing tab)
  *************************************************************/
 function renderList() {
   const visible = applyFilter(state.hosts);
@@ -398,20 +756,15 @@ function renderAlerts() {
     document.getElementById('alertBadge').style.display = 'none';
     return;
   }
-
   const unseen = state.alerts.filter(a => !state.seenAlerts.has(a.id)).length;
   const badge = document.getElementById('alertBadge');
-  if (unseen > 0) {
-    badge.textContent = unseen; badge.style.display = '';
-  } else {
-    badge.style.display = 'none';
-  }
+  if (unseen > 0) { badge.textContent = unseen; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
 
   el.innerHTML = state.alerts.map(a => {
     const icon = a.event === 'OFFLINE' ? '🔴'
                : a.event === 'ONLINE' ? '🟢'
-               : a.event === 'FLAPPING' ? '⚠️'
-               : 'ℹ️';
+               : a.event === 'FLAPPING' ? '⚠️' : 'ℹ️';
     return `
       <div class="alert" onclick="focusHost('${escapeAttr(a.host)}')">
         <div class="icon">${icon}</div>
@@ -441,7 +794,6 @@ async function openDetail(name) {
   if (!h) return;
 
   document.getElementById('dName').textContent = h.name;
-
   const uptime = h.uptime_24h != null ? h.uptime_24h + '%' : '—';
   const uptime7 = h.uptime_7d != null ? h.uptime_7d + '%' : '—';
   const uptime30 = h.uptime_30d != null ? h.uptime_30d + '%' : '—';
@@ -461,28 +813,20 @@ async function openDetail(name) {
       Coords: ${h.lat}, ${h.lon}<br>
       Uptime 30d: ${uptime30}
     </div>
-    <h3 style="font-size:13px;text-transform:uppercase;color:#94a3b8;margin:16px 0 8px">
-      Recent events
-    </h3>
+    <h3 style="font-size:13px;text-transform:uppercase;color:#94a3b8;margin:16px 0 8px">Recent events</h3>
     <div class="timeline" id="dTimeline">Loading…</div>
   `;
-
   document.getElementById('detail').classList.add('open');
 
   try {
     const events = await apiGet('history', { host: name, hours: 72 });
     const tl = document.getElementById('dTimeline');
-    if (!events.length) {
-      tl.innerHTML = '<div style="color:#94a3b8;font-size:13px">No events in last 72h</div>';
-      return;
-    }
+    if (!events.length) { tl.innerHTML = '<div style="color:#94a3b8;font-size:13px">No events in last 72h</div>'; return; }
     tl.innerHTML = events.map(e => `
       <div class="evt">
         <div class="t">${fmtTime(e.ts)}</div>
         <div>
-          <span style="color:${e.status==='Online'?'#22c55e':'#ef4444'}">
-            ● ${escapeHtml(e.status)}
-          </span>
+          <span style="color:${e.status==='Online'?'#22c55e':'#ef4444'}">● ${escapeHtml(e.status)}</span>
           <span style="color:#94a3b8"> ← ${escapeHtml(e.prev || '—')}</span>
         </div>
       </div>
@@ -493,16 +837,17 @@ async function openDetail(name) {
   }
 }
 
-function closeDetail() {
-  document.getElementById('detail').classList.remove('open');
-}
+function closeDetail() { document.getElementById('detail').classList.remove('open'); }
 
 function focusHost(name) {
   const h = state.hosts.find(x => x.name === name);
   if (!h) return;
-  switchTab('map');
-  map.setView([h.lat, h.lon], 17);
-  if (state.markers[name]) state.markers[name].openPopup();
+  switchTab('live');
+  if (map) {
+    map.setView([h.lat, h.lon], 17);
+    if (state.markers[name]) state.markers[name].openPopup();
+  }
+  pulsePin(name, h.status, true);
   closeDetail();
 }
 
@@ -526,7 +871,7 @@ function switchTab(name) {
   document.querySelectorAll('.panel').forEach(p => {
     p.classList.toggle('active', p.id === 'panel-' + name);
   });
-  if (name === 'map' && map) setTimeout(() => map.invalidateSize(), 50);
+  if (name === 'live' && map) setTimeout(() => map.invalidateSize(), 50);
   if (name === 'alerts') markAlertsSeen();
 }
 
@@ -538,6 +883,7 @@ function markAlertsSeen() {
 function renderAll() {
   renderStats();
   renderMap();
+  renderContainers();
   renderList();
 }
 
@@ -566,7 +912,18 @@ function escapeHtml(s) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+// For DOM IDs we need a stable per-name id
+function cssId(name) {
+  return 'u' + btoa(unescape(encodeURIComponent(name))).replace(/=/g,'').replace(/[+/]/g, '_');
+}
+
+// CSS.escape polyfill for querySelector with host names
+function cssEscape(s) {
+  if (window.CSS && CSS.escape) return CSS.escape(s);
+  return String(s).replace(/(["\\])/g, '\\$1');
+}
 
 /*************************************************************
  * ONE-SIGNAL PUSH
@@ -579,7 +936,6 @@ OneSignalDeferred.push(async function(OneSignal) {
       notifyButton: { enable: true, position: 'bottom-left' },
       allowLocalhostAsSecureOrigin: true
     });
-
     OneSignal.User.PushSubscription.addEventListener('change', async (event) => {
       const id = event.current.id;
       if (!id) return;
@@ -587,19 +943,15 @@ OneSignalDeferred.push(async function(OneSignal) {
       if (!email) return;
       await postSubscription(email, id);
     });
-
     const existingId = OneSignal.User.PushSubscription.id;
-    if (existingId && state.session) {
-      await postSubscription(state.session.email, existingId);
-    }
+    if (existingId && state.session) await postSubscription(state.session.email, existingId);
   } catch (e) { console.warn('OneSignal init failed:', e); }
 });
 
 async function postSubscription(email, playerId) {
   try {
     await fetch(API, {
-      method: 'POST',
-      mode: 'no-cors',
+      method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'subscribe', email, playerId })
     });
@@ -618,13 +970,13 @@ document.querySelectorAll('.chip').forEach(c => {
     document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active');
     state.filter = c.dataset.filter;
-    renderMap(); renderList();
+    renderList();
   });
 });
 
 document.getElementById('search').addEventListener('input', e => {
   state.search = e.target.value.trim();
-  renderMap(); renderList();
+  renderList();
 });
 
 document.getElementById('closeDetail').addEventListener('click', closeDetail);
@@ -635,6 +987,12 @@ document.getElementById('refreshBtn').addEventListener('click', async () => {
   await Promise.all([fetchHosts(), fetchAlerts()]);
   setTimeout(() => btn.classList.remove('spinning'), 400);
 });
+
+// Resume audio context on first user gesture (browsers require this)
+document.body.addEventListener('click', () => {
+  const ctx = ensureAudio();
+  if (ctx && ctx.state === 'suspended') ctx.resume();
+}, { once: true });
 
 /*************************************************************
  * BOOT
@@ -653,7 +1011,6 @@ function boot() {
   const token = localStorage.getItem('token');
   const session = localStorage.getItem('session');
   if (!token || !session) return;
-
   try {
     const res = await fetch(`${API}?action=me&token=${encodeURIComponent(token)}`);
     const data = await res.json();
@@ -664,9 +1021,7 @@ function boot() {
     } else {
       localStorage.clear();
     }
-  } catch (_) {
-    localStorage.clear();
-  }
+  } catch (_) { localStorage.clear(); }
 })();
 </script>
 </body>
